@@ -1,30 +1,32 @@
-import React, { useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Home from './pages/home/Home';
-import NoPage from './pages/nopage/NoPage';
-import ProductInfo from './pages/productinfo/ProductInfo';
-import CartPage from './pages/cartpage/CartPage';
-import AllProduct from './pages/allproduct/AllProduct';
-import Signup from './pages/registration/Signup';
-import Login from './pages/registration/Login';
-import UserDashboard from './pages/user/UserDashboard';
-import Admin from './pages/Admin/Admin';
-import AddProductPage from './pages/Admin/AddProductPage';
-import UpdateProductPage from './pages/Admin/UpdateProductPage';
-import CategoryPage from './pages/category/CategoryPage';
-import MyState from './context/myState';
-import { Toaster } from 'react-hot-toast';
-import { ProtectedRouteForAdmin } from './protectedroute/ProtectedRouteForAdmin';
-import ProtectedRouteForUser from './protectedroute/ProtectedRouteForUser';
-import Lenis from '@studio-freight/lenis';
+import React, { useEffect, useRef, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import Home from "./pages/home/Home";
+import NoPage from "./pages/nopage/NoPage";
+import ProductInfo from "./pages/productinfo/ProductInfo";
+import CartPage from "./pages/cartpage/CartPage";
+import AllProduct from "./pages/allproduct/AllProduct";
+import Signup from "./pages/registration/Signup";
+import Login from "./pages/registration/Login";
+import UserDashboard from "./pages/user/UserDashboard";
+import Admin from "./pages/Admin/Admin";
+import AddProductPage from "./pages/Admin/AddProductPage";
+import UpdateProductPage from "./pages/Admin/UpdateProductPage";
+import CategoryPage from "./pages/category/CategoryPage";
+import MyState from "./context/myState";
+import { Toaster } from "react-hot-toast";
+import { ProtectedRouteForAdmin } from "./protectedroute/ProtectedRouteForAdmin";
+import ProtectedRouteForUser from "./protectedroute/ProtectedRouteForUser";
+import Lenis from "@studio-freight/lenis";
 
-// ScrollToTop component to reset Lenis scroll on route change
+// Loader
+import LoadingScreen from "./LoadingScreen";
+
 const ScrollToTop = ({ lenis }) => {
   const { pathname } = useLocation();
 
   useEffect(() => {
     if (lenis.current) {
-      lenis.current.scrollTo(0, { immediate: true }); // scroll to top immediately
+      lenis.current.scrollTo(0, { immediate: true });
     }
   }, [pathname, lenis]);
 
@@ -33,10 +35,13 @@ const ScrollToTop = ({ lenis }) => {
 
 const App = () => {
   const lenisRef = useRef(null);
+  const [showLoader, setShowLoader] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
 
+  // Smooth scroll
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1,   // lower = faster
+      duration: 1,
       smooth: true,
       smoothTouch: true,
       touchMultiplier: 2,
@@ -48,7 +53,6 @@ const App = () => {
       lenis.raf(time);
       requestAnimationFrame(raf);
     }
-
     requestAnimationFrame(raf);
 
     return () => {
@@ -56,12 +60,51 @@ const App = () => {
     };
   }, []);
 
+  // Loader logic (minimum 5s + wait until everything is loaded)
+  useEffect(() => {
+    const minDuration = 5000; // 5s minimum
+    const startTime = Date.now();
+
+    const handleLoad = () => {
+      const elapsed = Date.now() - startTime;
+      const remaining = minDuration - elapsed;
+
+      setTimeout(() => {
+        // Trigger fade out
+        setFadeOut(true);
+
+        // Remove loader after fade animation
+        setTimeout(() => {
+          setShowLoader(false);
+        }, 800); // must match transition duration
+      }, remaining > 0 ? remaining : 0);
+    };
+
+    if (document.readyState === "complete") {
+      handleLoad();
+    } else {
+      window.addEventListener("load", handleLoad);
+    }
+
+    return () => window.removeEventListener("load", handleLoad);
+  }, []);
+
   return (
     <MyState>
-      <Router>
-        {/* ScrollToTop resets Lenis scroll on route change */}
-        <ScrollToTop lenis={lenisRef} />
+      {/* Loader overlay - stays mounted until fade completes */}
+      {showLoader && (
+        <div
+          className={`fixed inset-0 z-[9999] transition-opacity duration-700 ${
+            fadeOut ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          <LoadingScreen />
+        </div>
+      )}
 
+      {/* Main App */}
+      <Router>
+        <ScrollToTop lenis={lenisRef} />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/*" element={<NoPage />} />
